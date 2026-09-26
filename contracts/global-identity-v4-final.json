@@ -1,0 +1,24 @@
+{
+  "version": 4,
+  "status": "global-identity-final-rc",
+  "authority": "TCloud Core",
+  "fileIdentity": {
+    "primary": "coreFileId",
+    "fallback": "telegram peer/topic/message",
+    "ambiguousMatchPolicy": "do not assign coreFileId"
+  },
+  "mobile": {
+    "catalog": "/api/v1/files",
+    "coreUrlDefine": "TCLOUD_CORE_URL",
+    "tdlibFallback": true
+  },
+  "desktop": {
+    "localToCoreMap": "tcloud_core_file_map",
+    "canonicalFirst": true,
+    "legacyFallbackUntilCoverage100": true
+  },
+  "web": {
+    "coreProxy": true,
+    "canonicalMutations": true
+  }
+}

@@ -1,0 +1,47 @@
+{
+    "schema":  "tcloud-client-contract",
+    "version":  1,
+    "foundation":  "5.0",
+    "apiVersion":  "v1",
+    "core":  {
+                 "version":  "0.7.0",
+                 "baseUrl":  "http://127.0.0.1:8787",
+                 "capabilities":  "/api/v1/platform/capabilities",
+                 "status":  "/api/v1/status",
+                 "files":  "/api/v1/files",
+                 "forums":  "/api/v1/forums",
+                 "folders":  "/api/v1/folders",
+                 "delta":  "/api/v1/index/telegram"
+             },
+    "clients":  [
+                    "desktop",
+                    "web",
+                    "mobile"
+                ],
+    "semantics":  {
+                      "sameNames":  true,
+                      "sameStates":  true,
+                      "sameNavigationConcepts":  true,
+                      "sameTelegramIdentity":  true,
+                      "layoutMayAdapt":  true
+                  },
+    "syncStates":  [
+                       "online",
+                       "offline",
+                       "syncing",
+                       "uploading",
+                       "downloading",
+                       "attention",
+                       "paused"
+                   ],
+    "actions":  [
+                    "Novo forum",
+                    "Nova pasta",
+                    "Enviar",
+                    "Renomear",
+                    "Mover",
+                    "Lixeira",
+                    "Restaurar",
+                    "Excluir permanentemente"
+                ]
+}

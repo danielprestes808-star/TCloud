@@ -1,0 +1,81 @@
+{
+  "meta": {
+    "name": "TCloud Design System",
+    "version": "1.0.0",
+    "principle": "Uma identidade, tres interfaces"
+  },
+  "color": {
+    "background": "#0F1115",
+    "surface": "#171A20",
+    "surfaceSoft": "#1D2129",
+    "surfaceRaised": "#242933",
+    "border": "#2C333F",
+    "borderStrong": "#3A4351",
+    "text": "#F5F7FA",
+    "textSecondary": "#AAB3C0",
+    "textMuted": "#7F8996",
+    "primary": "#2F81F7",
+    "primaryHover": "#4B93FA",
+    "primarySoft": "rgba(47,129,247,0.14)",
+    "success": "#3FB950",
+    "warning": "#D29922",
+    "danger": "#F85149",
+    "info": "#58A6FF"
+  },
+  "radius": {
+    "xs": 6,
+    "sm": 8,
+    "md": 10,
+    "lg": 12,
+    "xl": 16,
+    "card": 12,
+    "dialog": 16
+  },
+  "spacing": {
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "xxl": 32
+  },
+  "size": {
+    "sidebar": 232,
+    "topbar": 52,
+    "row": 44,
+    "control": 36,
+    "iconSm": 16,
+    "iconMd": 18,
+    "iconLg": 22
+  },
+  "motion": {
+    "fast": 120,
+    "normal": 180,
+    "slow": 240
+  },
+  "navigation": [
+    { "id": "files", "label": "Arquivos", "icon": "folder" },
+    { "id": "recent", "label": "Recentes", "icon": "history" },
+    { "id": "favorites", "label": "Favoritos", "icon": "star" },
+    { "id": "offline", "label": "Disponivel offline", "icon": "download" },
+    { "id": "trash", "label": "Lixeira", "icon": "trash" }
+  ],
+  "actions": [
+    { "id": "newFolder", "label": "Nova pasta", "icon": "folder-plus" },
+    { "id": "upload", "label": "Enviar", "icon": "upload" },
+    { "id": "newForum", "label": "Novo forum", "icon": "messages-square" },
+    { "id": "rename", "label": "Renomear", "icon": "pencil" },
+    { "id": "share", "label": "Compartilhar", "icon": "share-2" },
+    { "id": "download", "label": "Baixar", "icon": "download" },
+    { "id": "delete", "label": "Excluir", "icon": "trash-2" }
+  ],
+  "syncStates": [
+    { "id": "online", "label": "Somente online", "icon": "cloud" },
+    { "id": "offline", "label": "Disponivel neste dispositivo", "icon": "circle-check" },
+    { "id": "syncing", "label": "Sincronizando", "icon": "refresh-cw" },
+    { "id": "uploading", "label": "Enviando", "icon": "upload" },
+    { "id": "downloading", "label": "Baixando", "icon": "download" },
+    { "id": "attention", "label": "Precisa de atencao", "icon": "triangle-alert" },
+    { "id": "paused", "label": "Pausado", "icon": "pause" }
+  ]
+}

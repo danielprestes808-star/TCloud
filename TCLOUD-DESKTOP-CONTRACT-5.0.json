@@ -1,0 +1,28 @@
+{
+    "integration":  "desktop-foundation-5",
+    "desktopVersion":  "13.0.17",
+    "foundation":  "5.0",
+    "model":  "hybrid",
+    "sharedCore":  {
+                       "capabilities":  "http://127.0.0.1:8787/api/v1/platform/capabilities",
+                       "status":  "http://127.0.0.1:8787/api/v1/status",
+                       "forums":  "http://127.0.0.1:8787/api/v1/forums",
+                       "delta":  "http://127.0.0.1:8787/api/v1/index/telegram"
+                   },
+    "localTauri":  [
+                       "CFAPI",
+                       "cache",
+                       "thumbnails",
+                       "preview",
+                       "Windows integration",
+                       "versions",
+                       "offline availability"
+                   ],
+    "refresh":  {
+                    "visibleMs":  15000,
+                    "hiddenMs":  45000,
+                    "onOnline":  true,
+                    "onFocus":  true,
+                    "onForumMutation":  true
+                }
+}

@@ -1,0 +1,2 @@
+﻿Java version 17 or higher is required.
+To override this check set SKIP_JDK_VERSION_CHECK

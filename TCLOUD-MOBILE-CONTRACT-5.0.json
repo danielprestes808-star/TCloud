@@ -1,0 +1,29 @@
+{
+    "integration":  "mobile-foundation-5",
+    "mobileVersion":  "1.0.22+34",
+    "foundation":  "5.0",
+    "model":  "hybrid",
+    "nativePrimary":  "TDLib",
+    "optionalCoreBridge":  {
+                               "enabledWith":  "--dart-define=TCLOUD_CORE_URL=http://IP_DO_CORE:8787",
+                               "capabilities":  "/api/v1/platform/capabilities",
+                               "foregroundRefreshSeconds":  15,
+                               "backgroundRefreshSeconds":  45
+                           },
+    "preserved":  [
+                      "TDLib native upload",
+                      "gallery sync",
+                      "thumbnail isolation by album",
+                      "video streaming",
+                      "direct in-app updater"
+                  ],
+    "sharedSyncStates":  [
+                             "online",
+                             "offline",
+                             "syncing",
+                             "uploading",
+                             "downloading",
+                             "attention",
+                             "paused"
+                         ]
+}

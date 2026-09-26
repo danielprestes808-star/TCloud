@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "identity": {
+    "filePrimaryKey": "core_file_id",
+    "folderPrimaryKey": "core_folder_id",
+    "remoteTransportKey": [
+      "telegram_peer_id",
+      "telegram_topic_id",
+      "telegram_message_id"
+    ],
+    "forbiddenAsGlobalIdentity": [
+      "sqlite_row_id",
+      "local_folder_id",
+      "local_topic_id",
+      "negative_local_alias"
+    ]
+  },
+  "clientRules": {
+    "desktop": "Persist local_file_id -> core_file_id mapping",
+    "mobile": "Persist local record -> core_file_id mapping",
+    "web": "Use core_file_id directly",
+    "newDevice": "Rebuild local state from Core canonical IDs"
+  }
+}

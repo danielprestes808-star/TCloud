@@ -1,0 +1,44 @@
+{
+    "product":  "TCloud",
+    "platformFoundation":  "5.0",
+    "approvedAt":  "2026-08-22T19:48:03.8019240-04:00",
+    "core":  {
+                 "version":  "0.7.0",
+                 "build":  "passed",
+                 "telegram":  "connected",
+                 "postgresql":  "connected",
+                 "realMutationE2E":  "passed"
+             },
+    "web":  {
+                "integration":  "5.0-final",
+                "build":  "passed",
+                "forumManagement":  "passed",
+                "capabilities":  "passed"
+            },
+    "desktop":  {
+                    "version":  "13.0.17",
+                    "integration":  "5.0.1",
+                    "frontendBuild":  "passed",
+                    "tauriCheck":  "passed",
+                    "model":  "hybrid"
+                },
+    "mobile":  {
+                   "version":  "1.0.22+34",
+                   "integration":  "5.0.2",
+                   "analyze":  "passed",
+                   "tests":  "passed",
+                   "apkPresent":  true,
+                   "model":  "tdlib-first-hybrid"
+               },
+    "sharedContract":  {
+                           "names":  "aligned",
+                           "states":  "aligned",
+                           "navigationConcepts":  "aligned",
+                           "telegramIdentity":  "shared"
+                       },
+    "limitations":  [
+                        "Este E2E valida contratos/builds das tres modalidades e mutacoes reais pelo Core/Telegram.",
+                        "Ele nao automatiza cliques fisicos na UI do Desktop nem no APK instalado.",
+                        "O bridge Mobile para o Core exige TCLOUD_CORE_URL acessivel pelo aparelho quando essa integracao opcional for usada."
+                    ]
+}

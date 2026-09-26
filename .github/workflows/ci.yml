@@ -1,0 +1,146 @@
+name: "TCloud Ecosystem CI"
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ----------------------------------------------------------------------------
+  # 1. CORE API (Rust / Axum)
+  # ----------------------------------------------------------------------------
+  core-test:
+    name: "Core: Cargo Check & Test"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core -> target
+
+      - name: Cargo Check
+        working-directory: core
+        run: cargo check
+
+      - name: Cargo Test
+        working-directory: core
+        run: cargo test
+
+  # ----------------------------------------------------------------------------
+  # 2. WEB CLIENT (Next.js 16)
+  # ----------------------------------------------------------------------------
+  web-build:
+    name: "Web: Lint & Build"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Web Dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: ESLint
+        working-directory: web
+        run: npm run lint
+
+      - name: Next.js Build
+        working-directory: web
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+  # ----------------------------------------------------------------------------
+  # 3. MOBILE (Flutter / Android)
+  # ----------------------------------------------------------------------------
+  mobile-test:
+    name: "Mobile: Flutter Analyze & Test"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Flutter Dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Flutter Analyze
+        working-directory: mobile
+        run: flutter analyze
+
+      - name: Flutter Test
+        working-directory: mobile
+        run: flutter test
+
+  # ----------------------------------------------------------------------------
+  # 4. APP DESKTOP (Windows Tauri / React)
+  # ----------------------------------------------------------------------------
+  app-verify:
+    name: "App: Desktop Verify, i18n & Build"
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri -> target
+
+      - name: Install App Dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Desktop Only Integrity
+        working-directory: app
+        shell: pwsh
+        run: npm run desktop:verify
+
+      - name: i18n Validation
+        working-directory: app
+        run: npm run i18n:validate
+
+      - name: Vite & TypeScript Build
+        working-directory: app
+        run: npm run build
+
+      - name: Tauri Cargo Check
+        working-directory: app
+        run: cargo check --manifest-path src-tauri/Cargo.toml
