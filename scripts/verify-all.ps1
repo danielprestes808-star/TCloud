@@ -39,7 +39,11 @@ function Run-Step {
 
     Push-Location $Directory
     try {
+        $global:LASTEXITCODE = 0
         & $Action
+        if ($LASTEXITCODE -ne 0) {
+            throw "O comando retornou código de erro $LASTEXITCODE."
+        }
         $sw.Stop()
         Write-Host "  -> Sucesso em $([Math]::Round($sw.Elapsed.TotalSeconds, 1))s" -ForegroundColor Green
     }

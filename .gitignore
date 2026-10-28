@@ -17,6 +17,8 @@ coverage/
 target/
 /app/src-tauri/gen/
 **/*.rs.bk
+*.bak
+**/*.bak
 
 # Editors
 .vscode/

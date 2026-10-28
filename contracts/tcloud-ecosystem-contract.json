@@ -1,0 +1,65 @@
+{
+  "schema": "tcloud-ecosystem-contract",
+  "contractVersion": "13.0.61",
+  "updatedAt": "2026-10-28T09:30:00-04:00",
+  "status": "synchronized",
+  "components": {
+    "core": {
+      "name": "TCloud Core",
+      "version": "0.9.0",
+      "framework": "Axum 0.8 / Tokio / SQLx PostgreSQL",
+      "defaultPort": 8787,
+      "healthEndpoint": "/health",
+      "features": [
+        "argon2-security",
+        "chacha20poly1305-vault",
+        "device-auth-pairing",
+        "public-share-links",
+        "delta-telegram-sync"
+      ]
+    },
+    "app": {
+      "name": "TCloud Desktop",
+      "version": "13.0.61",
+      "framework": "Tauri v2 / React 19 / TypeScript / CFAPI Windows",
+      "features": [
+        "cfapi-cloud-files",
+        "virtualized-file-list",
+        "multi-language-i18n",
+        "local-streaming-server",
+        "auto-updater"
+      ]
+    },
+    "mobile": {
+      "name": "TCloud Mobile",
+      "version": "1.1.38+119",
+      "framework": "Flutter 3.12 / Dart / TDLib Android",
+      "features": [
+        "tdlib-direct-sync",
+        "gallery-backup",
+        "biometric-app-lock",
+        "mlkit-document-scanner",
+        "chromecast-streaming",
+        "storage-cache-manager"
+      ]
+    },
+    "web": {
+      "name": "TCloud Web",
+      "version": "0.3.9",
+      "framework": "Next.js 16 / React 19 / Fluent UI",
+      "defaultPort": 3000,
+      "features": [
+        "server-only-core-proxy",
+        "public-share-viewer",
+        "pwa-ready",
+        "fluent-design-system"
+      ]
+    }
+  },
+  "compatibility": {
+    "minCoreVersion": "0.9.0",
+    "minDesktopVersion": "13.0.0",
+    "minMobileVersion": "1.1.0",
+    "minWebVersion": "0.3.0"
+  }
+}

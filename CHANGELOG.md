@@ -1,3 +1,35 @@
+# TCloud Mobile 1.1.38+119 — Gerenciador de Armazenamento e Limpeza de Cache
+
+- **Central de Armazenamento e Cache (`StorageManagementScreen`)**:
+  - Nova interface dedicada acessível em *Configurações > Armazenamento e cache*.
+  - Gráfico visual segmentado de uso de disco: distinção entre arquivos offline e cache de miniaturas.
+  - Ação com um toque para limpar cache de prévias e liberar espaço sem deslogar ou perder arquivos.
+  - Ferramenta de otimização de banco de dados e temporários do TDLib.
+  - Gerenciamento detalhado de arquivos offline, com remoção individual ou em lote das cópias locais.
+- **Higiene e Desempenho do Repositório**:
+  - Limpeza e liberação de mais de 1,4 GB em APKs compilados antigos e arquivos de diagnóstico soltos.
+  - Documentação do `mobile/README.md` sincronizada para a versão ativa `1.1.38+119`.
+  - Suíte de testes estendida com validação de renderização e fluxos da central de armazenamento.
+- **Sincronização de Contratos**:
+  - Atualização do contrato oficial em `contracts/tcloud-ecosystem-contract.json` com a nova feature `storage-cache-manager`.
+
+---
+
+# TCloud 13.0.61 — Ecosystem Alignment & Hygiene Consolidation
+
+- **Sincronização de Versões do Ecossistema**: Alinhamento formal de versões dos projetos ativos: Desktop (`13.0.61`), Core API (`0.9.0`), Mobile (`1.1.37+118`) e Web (`0.3.9`).
+- **Contratos Unificados**: Publicado o contrato [`contracts/tcloud-ecosystem-contract.json`](file:///d:/TCloud/contracts/tcloud-ecosystem-contract.json) com a matriz de compatibilidade e recursos ativos de cada cliente.
+- **Higiene do Repositório**:
+  - Remoção completa de mais de 200 arquivos residuais `.bak` dispersos no código-fonte.
+  - Reorganização da raiz: documentos históricos, snapshots e logs de auditoria migrados para `docs/history/`, `docs/contracts/` e `docs/audits/`.
+  - Remoção de arquivos legados duplicados (`Package.appxmanifest` desatualizado e `index.html` vazio).
+- **Validação e Confiabilidade (CI/DevOps)**:
+  - Correção no script `scripts/verify-all.ps1`: validação explícita de `$LASTEXITCODE` para evitar falsos positivos quando builds ou análises estáticas falham.
+- **Mobile Onboarding**:
+  - Adicionado `mobile/lib/telegram/telegram_credentials.example.dart` como modelo seguro para compilação local sem depender de credenciais versionadas.
+
+---
+
 # TCloud 13.0.3 — Explorer Minimal UI
 
 - Início simplificado: um único alerta de saúde, menos atalhos duplicados e arquivos principais em ícones pequenos.

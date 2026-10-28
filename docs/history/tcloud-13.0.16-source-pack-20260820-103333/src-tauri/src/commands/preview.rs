@@ -1,0 +1,1050 @@
+use crate::bandwidth::BandwidthManager;
+use crate::commands::utils::{media_size, resolve_peer};
+use crate::vpn_optimizer::NetworkConfig;
+use crate::TelegramState;
+use crate::db::DbConnection;
+use grammers_client::types::{Media, Peer};
+use image::codecs::jpeg::JpegEncoder;
+use rand::Rng;
+use serde::Serialize;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, LazyLock, Mutex, Weak};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{Duration, Instant, SystemTime};
+use tauri::{Emitter, Manager, State};
+use tokio::io::AsyncWriteExt;
+
+/// Supported image file extensions for thumbnails.
+/// Shared between Tauri commands and the REST API cache cleanup.
+pub const THUMBNAIL_EXTS: &[&str] = &["thumb.jpg", "jpg", "jpeg", "png", "gif", "webp", "bmp"];
+
+const PREVIEW_CACHE_MAX_FILES: usize = 30;
+const PREVIEW_CACHE_MAX_TOTAL_BYTES: u64 = 256 * 1024 * 1024;
+const THUMBNAIL_CACHE_MAX_FILES: usize = 4096;
+const THUMBNAIL_CACHE_MAX_TOTAL_BYTES: u64 = 768 * 1024 * 1024;
+const THUMBNAIL_MAX_DIMENSION: u32 = 512;
+const CACHE_PRUNE_MIN_INTERVAL_SECS: u64 = 30;
+
+static LAST_PREVIEW_PRUNE_EPOCH_SECS: AtomicU64 = AtomicU64::new(0);
+static LAST_THUMBNAIL_PRUNE_EPOCH_SECS: AtomicU64 = AtomicU64::new(0);
+
+fn claim_cache_prune(last: &AtomicU64) -> bool {
+    let now = SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0);
+
+    last.fetch_update(Ordering::AcqRel, Ordering::Acquire, |previous| {
+        (now.saturating_sub(previous) >= CACHE_PRUNE_MIN_INTERVAL_SECS).then_some(now)
+    })
+    .is_ok()
+}
+
+fn schedule_preview_cache_prune(cache_dir: PathBuf, preserve_path: Option<PathBuf>) {
+    if !claim_cache_prune(&LAST_PREVIEW_PRUNE_EPOCH_SECS) {
+        return;
+    }
+    tauri::async_runtime::spawn(async move {
+        prune_preview_cache(cache_dir, preserve_path).await;
+    });
+}
+
+fn schedule_thumbnail_cache_prune(cache_dir: PathBuf, preserve_path: Option<PathBuf>) {
+    if !claim_cache_prune(&LAST_THUMBNAIL_PRUNE_EPOCH_SECS) {
+        return;
+    }
+    tauri::async_runtime::spawn(async move {
+        prune_thumbnail_cache(cache_dir, preserve_path).await;
+    });
+}
+
+type DownloadLock = tokio::sync::Mutex<()>;
+static DOWNLOAD_LOCKS: LazyLock<Mutex<HashMap<String, Weak<DownloadLock>>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+fn is_registered_encrypted(
+    db_pool: &DbConnection,
+    folder_id: Option<i64>,
+    message_id: i32,
+) -> Result<bool, String> {
+    let connection = db_pool.lock().map_err(|_| "DB poisoned".to_string())?;
+    let folder_key = folder_id
+        .map(|id| id.to_string())
+        .unwrap_or_else(|| "home".to_string());
+    let mut statement = connection
+        .prepare("SELECT 1 FROM encrypted_files WHERE folder_key = ? AND message_id = ? AND record_state = 'active'")
+        .map_err(|error| error.to_string())?;
+    statement.bind((1, folder_key.as_str())).map_err(|error| error.to_string())?;
+    statement.bind((2, i64::from(message_id))).map_err(|error| error.to_string())?;
+    Ok(matches!(statement.next(), Ok(sqlite::State::Row)))
+}
+
+fn download_lock(key: String) -> Arc<DownloadLock> {
+    let mut locks = DOWNLOAD_LOCKS
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    locks.retain(|_, lock| lock.strong_count() > 0);
+    if let Some(existing) = locks.get(&key).and_then(Weak::upgrade) {
+        return existing;
+    }
+
+    let lock = Arc::new(DownloadLock::new(()));
+    locks.insert(key, Arc::downgrade(&lock));
+    lock
+}
+
+fn cache_stem(folder_id: Option<i64>, message_id: i32) -> String {
+    let folder_key = folder_id
+        .map(|id| id.to_string())
+        .unwrap_or_else(|| "home".to_string());
+    format!("{}_{}", folder_key, message_id)
+}
+
+async fn is_nonempty_file(path: &Path) -> bool {
+    tokio::fs::metadata(path)
+        .await
+        .is_ok_and(|meta| meta.is_file() && meta.len() > 0)
+}
+
+fn foreground_transfer_running(db_pool: &DbConnection) -> Result<bool, String> {
+    let connection = db_pool.lock().map_err(|_| "DB poisoned".to_string())?;
+    let mut statement = connection
+        .prepare(
+            "SELECT COUNT(*) FROM tcloud_sync_jobs
+             WHERE status='running'
+               AND COALESCE(cancel_requested,0)=0
+               AND COALESCE(priority,0)>=100
+               AND operation IN ('upload','refresh','download')",
+        )
+        .map_err(|error| error.to_string())?;
+    match statement.next().map_err(|error| error.to_string())? {
+        sqlite::State::Row => Ok(statement.read::<i64, _>(0).unwrap_or(0) > 0),
+        _ => Ok(false),
+    }
+}
+
+async fn wait_for_thumbnail_headroom(
+    db_pool: &DbConnection,
+    max_wait: Duration,
+) -> Result<bool, String> {
+    let started = Instant::now();
+    loop {
+        if !foreground_transfer_running(db_pool)? {
+            return Ok(true);
+        }
+        if started.elapsed() >= max_wait {
+            return Ok(false);
+        }
+        tokio::time::sleep(Duration::from_millis(250)).await;
+    }
+}
+
+async fn find_cached_file(cache_dir: &Path, stem: &str) -> Option<PathBuf> {
+    let prefix = format!("{}.", stem);
+    let mut entries = tokio::fs::read_dir(cache_dir).await.ok()?;
+    let mut newest: Option<(PathBuf, SystemTime)> = None;
+
+    while let Ok(Some(entry)) = entries.next_entry().await {
+        let path = entry.path();
+        let name = match path.file_name().and_then(|name| name.to_str()) {
+            Some(name) => name,
+            None => continue,
+        };
+        if !name.starts_with(&prefix) || name.ends_with(".part") {
+            continue;
+        }
+        let meta = match entry.metadata().await {
+            Ok(meta) if meta.is_file() && meta.len() > 0 => meta,
+            _ => continue,
+        };
+        let modified = meta.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+        if newest
+            .as_ref()
+            .is_none_or(|(_, current)| modified > *current)
+        {
+            newest = Some((path, modified));
+        }
+    }
+
+    newest.map(|(path, _)| path)
+}
+
+fn media_extension(media: &Media) -> String {
+    let extension = match media {
+        Media::Document(document) => {
+            let from_name = Path::new(document.name())
+                .extension()
+                .map(|value| value.to_string_lossy().to_lowercase())
+                .unwrap_or_default();
+            if !from_name.is_empty() {
+                from_name
+            } else {
+                match document.mime_type().unwrap_or("") {
+                    "image/jpeg" => "jpg".to_string(),
+                    "image/png" => "png".to_string(),
+                    "image/gif" => "gif".to_string(),
+                    "image/webp" => "webp".to_string(),
+                    "image/bmp" => "bmp".to_string(),
+                    "application/pdf" => "pdf".to_string(),
+                    "video/mp4" => "mp4".to_string(),
+                    _ => "bin".to_string(),
+                }
+            }
+        }
+        Media::Photo(_) => "jpg".to_string(),
+        _ => "bin".to_string(),
+    };
+
+    if extension.len() <= 12
+        && extension
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric())
+    {
+        extension
+    } else {
+        "bin".to_string()
+    }
+}
+
+#[derive(Clone)]
+struct PreviewProgressContext {
+    app_handle: tauri::AppHandle,
+    message_id: i32,
+    folder_id: Option<i64>,
+    total_bytes: u64,
+}
+
+#[derive(Clone, Serialize)]
+struct PreviewProgressPayload {
+    message_id: i32,
+    folder_id: Option<i64>,
+    downloaded_bytes: u64,
+    total_bytes: u64,
+    percent: u8,
+}
+
+fn emit_preview_progress(context: &PreviewProgressContext, downloaded_bytes: u64, complete: bool) {
+    let percent = if complete {
+        100
+    } else if context.total_bytes > 0 {
+        ((downloaded_bytes as f64 / context.total_bytes as f64) * 100.0).min(99.0) as u8
+    } else {
+        0
+    };
+    let _ = context.app_handle.emit(
+        "preview-progress",
+        PreviewProgressPayload {
+            message_id: context.message_id,
+            folder_id: context.folder_id,
+            downloaded_bytes,
+            total_bytes: context.total_bytes,
+            percent,
+        },
+    );
+}
+
+async fn prune_preview_cache(
+    cache_dir: std::path::PathBuf,
+    preserve_path: Option<std::path::PathBuf>,
+) {
+    let _ = tokio::task::spawn_blocking(move || {
+        let mut read_dir = match std::fs::read_dir(&cache_dir) {
+            Ok(entries) => entries,
+            Err(_) => return,
+        };
+
+        // First pass: delete any orphaned .part files left behind by
+        // interrupted downloads. These are always stale and never preserved.
+        for entry in read_dir.by_ref().flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            let fname = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if fname.ends_with(".part") {
+                let _ = std::fs::remove_file(&path);
+            }
+        }
+
+        // Second pass: gather remaining files for size-based pruning.
+        // Re-read the directory to get a fresh iterator after the first pass
+        // may have modified it.
+        let read_dir = match std::fs::read_dir(&cache_dir) {
+            Ok(entries) => entries,
+            Err(_) => return,
+        };
+        let mut files: Vec<(std::path::PathBuf, std::time::SystemTime, u64)> = Vec::new();
+        for entry in read_dir.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            if preserve_path
+                .as_ref()
+                .is_some_and(|preserve| preserve == &path)
+            {
+                continue;
+            }
+            if let Ok(meta) = entry.metadata() {
+                let modified = meta.modified().unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                files.push((path, modified, meta.len()));
+            }
+        }
+        files.sort_by_key(|(_, modified, _)| *modified);
+        let mut total_bytes: u64 = files.iter().map(|(_, _, len)| *len).sum();
+        while files.len() > PREVIEW_CACHE_MAX_FILES || total_bytes > PREVIEW_CACHE_MAX_TOTAL_BYTES {
+            if let Some((path, _, len)) = files.first().cloned() {
+                let _ = std::fs::remove_file(&path);
+                total_bytes = total_bytes.saturating_sub(len);
+                files.remove(0);
+            } else {
+                break;
+            }
+        }
+    })
+    .await;
+}
+
+async fn prune_thumbnail_cache(cache_dir: PathBuf, preserve_path: Option<PathBuf>) {
+    let _ = tokio::task::spawn_blocking(move || {
+        let entries = match std::fs::read_dir(&cache_dir) {
+            Ok(entries) => entries,
+            Err(_) => return,
+        };
+        let mut files: Vec<(PathBuf, SystemTime, u64)> = Vec::new();
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            let name = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("");
+            if name.ends_with(".part") {
+                let _ = std::fs::remove_file(path);
+                continue;
+            }
+            if preserve_path
+                .as_ref()
+                .is_some_and(|preserve| preserve == &path)
+            {
+                continue;
+            }
+            if let Ok(meta) = entry.metadata() {
+                files.push((
+                    path,
+                    meta.modified().unwrap_or(SystemTime::UNIX_EPOCH),
+                    meta.len(),
+                ));
+            }
+        }
+        files.sort_by_key(|(_, modified, _)| *modified);
+        let mut total_bytes: u64 = files.iter().map(|(_, _, len)| *len).sum();
+        while files.len() > THUMBNAIL_CACHE_MAX_FILES
+            || total_bytes > THUMBNAIL_CACHE_MAX_TOTAL_BYTES
+        {
+            if let Some((path, _, len)) = files.first().cloned() {
+                let _ = std::fs::remove_file(path);
+                total_bytes = total_bytes.saturating_sub(len);
+                files.remove(0);
+            } else {
+                break;
+            }
+        }
+    })
+    .await;
+}
+
+async fn create_resized_thumbnail(
+    source_path: PathBuf,
+    destination_path: PathBuf,
+) -> Result<PathBuf, String> {
+    tokio::task::spawn_blocking(move || {
+        let reader = image::ImageReader::open(&source_path)
+            .map_err(|error| format!("Failed to open image for thumbnail: {}", error))?
+            .with_guessed_format()
+            .map_err(|error| format!("Failed to identify thumbnail image: {}", error))?;
+        let decoded = reader
+            .decode()
+            .map_err(|error| format!("Failed to decode thumbnail image: {}", error))?;
+        let resized = decoded.thumbnail(THUMBNAIL_MAX_DIMENSION, THUMBNAIL_MAX_DIMENSION);
+        let rgba = resized.to_rgba8();
+        let mut rgb = image::RgbImage::new(rgba.width(), rgba.height());
+
+        for (source, destination) in rgba.pixels().zip(rgb.pixels_mut()) {
+            let alpha = source[3] as u16;
+            let inverse_alpha = 255 - alpha;
+            *destination = image::Rgb([
+                ((source[0] as u16 * alpha + 248 * inverse_alpha) / 255) as u8,
+                ((source[1] as u16 * alpha + 248 * inverse_alpha) / 255) as u8,
+                ((source[2] as u16 * alpha + 248 * inverse_alpha) / 255) as u8,
+            ]);
+        }
+
+        let unique_id = rand::rng().random::<u64>();
+        let temporary_path = destination_path.with_extension(format!("thumb_{}.part", unique_id));
+        let file = std::fs::File::create(&temporary_path)
+            .map_err(|error| format!("Failed to create thumbnail: {}", error))?;
+        let mut encoder = JpegEncoder::new_with_quality(std::io::BufWriter::new(file), 82);
+        encoder
+            .encode_image(&image::DynamicImage::ImageRgb8(rgb))
+            .map_err(|error| format!("Failed to encode thumbnail: {}", error))?;
+
+        if destination_path.exists() {
+            let _ = std::fs::remove_file(&destination_path);
+        }
+        std::fs::rename(&temporary_path, &destination_path)
+            .map_err(|error| format!("Failed to save thumbnail: {}", error))?;
+        Ok(destination_path)
+    })
+    .await
+    .map_err(|error| format!("Thumbnail task failed: {}", error))?
+}
+
+/// Download media to a file using `iter_download` with manual chunk writing.
+/// Returns the number of bytes written.
+///
+/// Unlike `grammers_client::Client::download_media`, this returns an explicit
+/// error when the download produces zero bytes (e.g. stale file references or
+/// Telegram CDN stream drops).
+async fn download_to_file<D: grammers_client::types::Downloadable>(
+    client: &grammers_client::Client,
+    media: &D,
+    part_path: &std::path::Path,
+    chunk_size: usize,
+    download_limit_bytes_per_sec: u64,
+    progress: Option<&PreviewProgressContext>,
+) -> Result<u64, String> {
+    let mut file = tokio::fs::File::create(part_path)
+        .await
+        .map_err(|e| format!("Failed to create .part file: {}", e))?;
+
+    let valid_chunk_size = chunk_size.clamp(4 * 1024, 512 * 1024) / (4 * 1024) * (4 * 1024);
+    let mut download_iter = client.iter_download(media);
+    download_iter = download_iter.chunk_size(valid_chunk_size as i32);
+    let mut written: u64 = 0;
+    let started_at = Instant::now();
+    let mut last_progress_emit = Instant::now();
+
+    loop {
+        match download_iter.next().await {
+            Ok(Some(chunk)) => {
+                file.write_all(&chunk)
+                    .await
+                    .map_err(|e| format!("Write error: {}", e))?;
+                written += chunk.len() as u64;
+
+                if let Some(context) = progress {
+                    if last_progress_emit.elapsed() >= Duration::from_millis(200) {
+                        emit_preview_progress(context, written, false);
+                        last_progress_emit = Instant::now();
+                    }
+                }
+
+                if download_limit_bytes_per_sec > 0 {
+                    let expected_elapsed = Duration::from_secs_f64(
+                        written as f64 / download_limit_bytes_per_sec as f64,
+                    );
+                    let actual_elapsed = started_at.elapsed();
+                    if expected_elapsed > actual_elapsed {
+                        tokio::time::sleep(expected_elapsed - actual_elapsed).await;
+                    }
+                }
+            }
+            Ok(None) => break,
+            Err(e) => {
+                let _ = tokio::fs::remove_file(part_path).await;
+                return Err(format!("Download error: {}", e));
+            }
+        }
+    }
+
+    file.flush()
+        .await
+        .map_err(|e| format!("Flush error: {}", e))?;
+    drop(file);
+
+    if written == 0 {
+        let _ = tokio::fs::remove_file(part_path).await;
+        return Err(
+            "Download produced zero bytes (stale file reference or stream drop)".to_string(),
+        );
+    }
+
+    if let Some(context) = progress {
+        emit_preview_progress(context, written, true);
+    }
+
+    Ok(written)
+}
+
+struct DownloadOptions<'a> {
+    client: &'a grammers_client::Client,
+    peer: &'a Peer,
+    media: &'a Media,
+    message_id: i32,
+    folder_id: Option<i64>,
+    save_path: &'a Path,
+    expected_size: u64,
+    chunk_size: usize,
+    download_limit_bytes_per_sec: u64,
+    app_handle: &'a tauri::AppHandle,
+    bandwidth: &'a BandwidthManager,
+    report_progress: bool,
+}
+
+async fn download_media_with_retry(options: DownloadOptions<'_>) -> Result<(), String> {
+    if is_nonempty_file(options.save_path).await {
+        return Ok(());
+    }
+
+    options.bandwidth.try_reserve_down(options.expected_size)?;
+    let extension = options
+        .save_path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .unwrap_or("bin");
+    let unique_id = rand::rng().random::<u64>();
+    let part_path = options
+        .save_path
+        .with_extension(format!("{}_{}.part", extension, unique_id));
+    let progress = options.report_progress.then(|| PreviewProgressContext {
+        app_handle: options.app_handle.clone(),
+        message_id: options.message_id,
+        folder_id: options.folder_id,
+        total_bytes: options.expected_size,
+    });
+
+    let mut last_error = String::new();
+    let _ = tokio::fs::remove_file(&part_path).await;
+    match download_to_file(
+        options.client,
+        options.media,
+        &part_path,
+        options.chunk_size,
+        options.download_limit_bytes_per_sec,
+        progress.as_ref(),
+    )
+    .await
+    {
+        Ok(_) => {}
+        Err(error) => last_error = error,
+    }
+
+    if !is_nonempty_file(&part_path).await {
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        let fresh_media = options
+            .client
+            .get_messages_by_id(options.peer, &[options.message_id])
+            .await
+            .ok()
+            .and_then(|messages| messages.into_iter().flatten().next())
+            .and_then(|message| message.media());
+
+        if let Some(fresh_media) = fresh_media {
+            let _ = tokio::fs::remove_file(&part_path).await;
+            if let Err(error) = download_to_file(
+                options.client,
+                &fresh_media,
+                &part_path,
+                options.chunk_size,
+                options.download_limit_bytes_per_sec,
+                progress.as_ref(),
+            )
+            .await
+            {
+                last_error = error;
+            }
+        }
+    }
+
+    if !is_nonempty_file(&part_path).await {
+        options.bandwidth.release_down(options.expected_size);
+        let _ = tokio::fs::remove_file(&part_path).await;
+        return Err(if last_error.is_empty() {
+            "Preview download failed".to_string()
+        } else {
+            last_error
+        });
+    }
+
+    if is_nonempty_file(options.save_path).await {
+        let _ = tokio::fs::remove_file(&part_path).await;
+        options.bandwidth.release_down(options.expected_size);
+        return Ok(());
+    }
+
+    if let Err(error) = tokio::fs::rename(&part_path, options.save_path).await {
+        if is_nonempty_file(options.save_path).await {
+            let _ = tokio::fs::remove_file(&part_path).await;
+            options.bandwidth.release_down(options.expected_size);
+            return Ok(());
+        }
+        options.bandwidth.release_down(options.expected_size);
+        let _ = tokio::fs::remove_file(&part_path).await;
+        return Err(format!("Failed to save preview: {}", error));
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn cmd_get_preview(
+    message_id: i32,
+    folder_id: Option<i64>,
+    app_handle: tauri::AppHandle,
+    state: State<'_, TelegramState>,
+    bw_state: State<'_, Arc<BandwidthManager>>,
+    net_config: State<'_, Arc<NetworkConfig>>,
+    db_pool: State<'_, DbConnection>,
+) -> Result<String, String> {
+    if is_registered_encrypted(db_pool.inner(), folder_id, message_id)? {
+        return Err("[ENCRYPTED_PREVIEW_UNAVAILABLE] Download and authenticate the encrypted file before opening it".to_string());
+    }
+    let cache_dir = app_handle
+        .path()
+        .app_cache_dir()
+        .map_err(|error: tauri::Error| error.to_string())?
+        .join("previews");
+    if tokio::fs::metadata(&cache_dir).await.is_err() {
+        tokio::fs::create_dir_all(&cache_dir)
+            .await
+            .map_err(|error| error.to_string())?;
+    }
+
+    let stem = cache_stem(folder_id, message_id);
+    if let Some(path) = find_cached_file(&cache_dir, &stem).await {
+        log::debug!("Preview cache hit before Telegram lookup: {:?}", path);
+        return Ok(path.to_string_lossy().to_string());
+    }
+
+    let lock = download_lock(format!("preview:{}", stem));
+    let _guard = lock.lock().await;
+    if let Some(path) = find_cached_file(&cache_dir, &stem).await {
+        return Ok(path.to_string_lossy().to_string());
+    }
+
+    let client_opt = { state.client.lock().await.clone() };
+    #[cfg(debug_assertions)]
+    if client_opt.is_none() {
+        return Ok("".to_string());
+    }
+    let client = client_opt.ok_or_else(|| "Client not connected".to_string())?;
+    let peer = resolve_peer(&client, folder_id, &state.peer_cache).await?;
+    let message = client
+        .get_messages_by_id(&peer, &[message_id])
+        .await
+        .map_err(|error| error.to_string())?
+        .into_iter()
+        .flatten()
+        .next()
+        .ok_or_else(|| "File not found".to_string())?;
+    if message.text() == "TDENC2"
+        || matches!(
+            message.media(),
+            Some(Media::Document(document))
+                if document.name().to_ascii_lowercase().ends_with(".tdenc")
+        )
+    {
+        return Err("[ENCRYPTED_PREVIEW_UNAVAILABLE] Download and authenticate the encrypted file before opening it".to_string());
+    }
+    let media = message
+        .media()
+        .ok_or_else(|| "File has no downloadable media".to_string())?;
+    let extension = media_extension(&media);
+    let save_path = cache_dir.join(format!("{}.{}", stem, extension));
+
+    download_media_with_retry(DownloadOptions {
+        client: &client,
+        peer: &peer,
+        media: &media,
+        message_id,
+        folder_id,
+        save_path: &save_path,
+        expected_size: media_size(&media),
+        chunk_size: net_config.chunk_size_bytes(),
+        download_limit_bytes_per_sec: net_config.download_limit_bytes_per_sec(),
+        app_handle: &app_handle,
+        bandwidth: bw_state.inner().as_ref(),
+        report_progress: true,
+    })
+    .await?;
+
+    schedule_preview_cache_prune(cache_dir.clone(), Some(save_path.clone()));
+
+    Ok(save_path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub async fn cmd_clean_preview_cache(app_handle: tauri::AppHandle) -> Result<(), String> {
+    let cache_dir = app_handle
+        .path()
+        .app_cache_dir()
+        .map_err(|e: tauri::Error| e.to_string())?
+        .join("previews");
+
+    let _ = tokio::task::spawn_blocking(move || {
+        if cache_dir.exists() {
+            if let Ok(entries) = std::fs::read_dir(cache_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_file() {
+                        let _ = std::fs::remove_file(path);
+                    }
+                }
+            }
+        }
+    })
+    .await;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn cmd_clean_cache(app_handle: tauri::AppHandle) -> Result<(), String> {
+    let cache_dir = app_handle
+        .path()
+        .app_cache_dir()
+        .map_err(|e: tauri::Error| e.to_string())?
+        .join("previews");
+    let thumb_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e: tauri::Error| e.to_string())?
+        .join("thumbnails");
+
+    let _ = tokio::task::spawn_blocking(move || {
+        if cache_dir.exists() {
+            let _ = std::fs::remove_dir_all(cache_dir);
+        }
+        if thumb_dir.exists() {
+            let _ = std::fs::remove_dir_all(thumb_dir);
+        }
+    })
+    .await;
+    Ok(())
+}
+
+/// Get a small thumbnail for inline display in file cards.
+/// Returns a local asset path for images, empty string for non-image files.
+#[tauri::command]
+pub async fn cmd_get_thumbnail(
+    message_id: i32,
+    folder_id: Option<i64>,
+    background: Option<bool>,
+    app_handle: tauri::AppHandle,
+    state: State<'_, TelegramState>,
+    bw_state: State<'_, Arc<BandwidthManager>>,
+    net_config: State<'_, Arc<NetworkConfig>>,
+    db_pool: State<'_, DbConnection>,
+) -> Result<String, String> {
+    if is_registered_encrypted(db_pool.inner(), folder_id, message_id)? {
+        return Ok(String::new());
+    }
+    let thumbnail_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|error: tauri::Error| error.to_string())?
+        .join("thumbnails");
+    let preview_dir = app_handle
+        .path()
+        .app_cache_dir()
+        .map_err(|error: tauri::Error| error.to_string())?
+        .join("previews");
+    for directory in [&thumbnail_dir, &preview_dir] {
+        if tokio::fs::metadata(directory).await.is_err() {
+            tokio::fs::create_dir_all(directory)
+                .await
+                .map_err(|error| error.to_string())?;
+        }
+    }
+
+    let stem = cache_stem(folder_id, message_id);
+    let optimized_path = thumbnail_dir.join(format!("{}.thumb.jpg", stem));
+    if is_nonempty_file(&optimized_path).await {
+        return Ok(optimized_path.to_string_lossy().to_string());
+    }
+
+    let lock = download_lock(format!("thumbnail:{}", stem));
+    let _guard = lock.lock().await;
+    if is_nonempty_file(&optimized_path).await {
+        return Ok(optimized_path.to_string_lossy().to_string());
+    }
+
+    // Migrate older caches that may contain a full-size original into a real thumbnail.
+    if let Some(legacy_path) = find_cached_file(&thumbnail_dir, &stem).await {
+        match create_resized_thumbnail(legacy_path.clone(), optimized_path.clone()).await {
+            Ok(path) => {
+                if path != legacy_path {
+                    let _ = tokio::fs::remove_file(legacy_path).await;
+                }
+                return Ok(path.to_string_lossy().to_string());
+            }
+            Err(error) => {
+                log::warn!("Could not migrate cached thumbnail: {}", error);
+                return Ok(legacy_path.to_string_lossy().to_string());
+            }
+        }
+    }
+
+    // If the full preview is already cached, derive the thumbnail without Telegram traffic.
+    if let Some(preview_path) = find_cached_file(&preview_dir, &stem).await {
+        if let Ok(path) = create_resized_thumbnail(preview_path, optimized_path.clone()).await {
+            return Ok(path.to_string_lossy().to_string());
+        }
+    }
+
+    // Thumbnails are background polish, never more important than a file the user
+    // just copied/opened in Explorer. Visible cards wait briefly; speculative
+    // prefetch gives the active transfer a larger window and simply defers if the
+    // network is still busy.
+    let background_request = background.unwrap_or(false);
+    let headroom = wait_for_thumbnail_headroom(
+        db_pool.inner(),
+        if background_request { Duration::from_secs(4) } else { Duration::from_millis(750) },
+    ).await?;
+    if background_request && !headroom {
+        return Ok(String::new());
+    }
+
+    let client_opt = { state.client.lock().await.clone() };
+    #[cfg(debug_assertions)]
+    if client_opt.is_none() {
+        return Ok("".to_string());
+    }
+    let client = client_opt.ok_or_else(|| "Client not connected".to_string())?;
+    let peer = resolve_peer(&client, folder_id, &state.peer_cache).await?;
+    let message = client
+        .get_messages_by_id(&peer, &[message_id])
+        .await
+        .map_err(|error| error.to_string())?
+        .into_iter()
+        .flatten()
+        .next()
+        .ok_or_else(|| "File not found".to_string())?;
+    if message.text() == "TDENC2"
+        || matches!(
+            message.media(),
+            Some(Media::Document(document))
+                if document.name().to_ascii_lowercase().ends_with(".tdenc")
+        )
+    {
+        return Ok(String::new());
+    }
+    let media = message
+        .media()
+        .ok_or_else(|| "File has no downloadable media".to_string())?;
+    let is_image = match &media {
+        Media::Photo(_) => true,
+        Media::Document(document) => document.mime_type().unwrap_or("").starts_with("image/"),
+        _ => false,
+    };
+    if !is_image {
+        return Ok("".to_string());
+    }
+
+    let thumbnails = match &media {
+        Media::Photo(photo) => photo.thumbs(),
+        Media::Document(document) => document.thumbs(),
+        _ => Vec::new(),
+    };
+
+    let selected_thumbnail = thumbnails
+        .iter()
+        .filter(|thumbnail| thumbnail.size() > 0 && thumbnail.size() <= 512 * 1024)
+        .max_by_key(|thumbnail| thumbnail.size())
+        .or_else(|| {
+            thumbnails
+                .iter()
+                .filter(|thumbnail| thumbnail.size() > 0)
+                .min_by_key(|thumbnail| thumbnail.size())
+        });
+
+    if let Some(thumbnail) = selected_thumbnail {
+        let unique_id = rand::rng().random::<u64>();
+        let part_path = optimized_path.with_extension(format!("source_{}.part", unique_id));
+        let thumbnail_size = thumbnail.size() as u64;
+        bw_state.try_reserve_down(thumbnail_size)?;
+        let result = download_to_file(
+            &client,
+            thumbnail,
+            &part_path,
+            net_config.chunk_size_bytes(),
+            net_config.download_limit_bytes_per_sec(),
+            None,
+        )
+        .await;
+        if let Err(error) = result {
+            bw_state.release_down(thumbnail_size);
+            let _ = tokio::fs::remove_file(&part_path).await;
+            return Err(error);
+        }
+
+        let final_path =
+            match create_resized_thumbnail(part_path.clone(), optimized_path.clone()).await {
+                Ok(path) => {
+                    let _ = tokio::fs::remove_file(part_path).await;
+                    path
+                }
+                Err(error) => {
+                    log::warn!("Could not normalize Telegram thumbnail: {}", error);
+                    tokio::fs::rename(&part_path, &optimized_path)
+                        .await
+                        .map_err(|rename_error| rename_error.to_string())?;
+                    optimized_path.clone()
+                }
+            };
+
+        schedule_thumbnail_cache_prune(thumbnail_dir.clone(), Some(final_path.clone()));
+        return Ok(final_path.to_string_lossy().to_string());
+    }
+
+    // Some image documents have no Telegram thumbnail. Avoid turning a card thumbnail
+    // into a huge hidden transfer: very large originals use the normal file icon until
+    // the user explicitly opens/downloads them.
+    let original_size = media_size(&media);
+    if original_size > 32 * 1024 * 1024
+        || (background_request && original_size > 8 * 1024 * 1024)
+    {
+        return Ok(String::new());
+    }
+
+    // Smaller originals may be downloaded once into the preview cache, then reused.
+    let preview_lock = download_lock(format!("preview:{}", stem));
+    let _preview_guard = preview_lock.lock().await;
+    let preview_path = if let Some(path) = find_cached_file(&preview_dir, &stem).await {
+        path
+    } else {
+        let extension = media_extension(&media);
+        let path = preview_dir.join(format!("{}.{}", stem, extension));
+        download_media_with_retry(DownloadOptions {
+            client: &client,
+            peer: &peer,
+            media: &media,
+            message_id,
+            folder_id,
+            save_path: &path,
+            expected_size: media_size(&media),
+            chunk_size: net_config.chunk_size_bytes(),
+            download_limit_bytes_per_sec: net_config.download_limit_bytes_per_sec(),
+            app_handle: &app_handle,
+            bandwidth: bw_state.inner().as_ref(),
+            report_progress: true,
+        })
+        .await?;
+        schedule_preview_cache_prune(preview_dir.clone(), Some(path.clone()));
+        path
+    };
+
+    let final_path = create_resized_thumbnail(preview_path.clone(), optimized_path.clone())
+        .await
+        .unwrap_or(preview_path);
+    schedule_thumbnail_cache_prune(thumbnail_dir.clone(), Some(optimized_path));
+    Ok(final_path.to_string_lossy().to_string())
+}
+
+/// Delete stale preview cache entries for a specific message in a specific folder.
+/// Preview cache files are named `{folder_key}_{message_id}.{ext}`.
+/// This removes all extensions for the given folder+message_id pair.
+#[tauri::command]
+pub async fn cmd_delete_preview_for_message(
+    message_id: i32,
+    folder_id: Option<i64>,
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    let cache_dir = app_handle
+        .path()
+        .app_cache_dir()
+        .map_err(|e: tauri::Error| e.to_string())?
+        .join("previews");
+
+    let folder_key = folder_id
+        .map(|id| id.to_string())
+        .unwrap_or_else(|| "home".to_string());
+
+    let prefix = format!("{}_{}.", folder_key, message_id);
+
+    let _ = tokio::task::spawn_blocking(move || {
+        if let Ok(entries) = std::fs::read_dir(&cache_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if !path.is_file() {
+                    continue;
+                }
+                let fname = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if fname.starts_with(&prefix) {
+                    let _ = std::fs::remove_file(&path);
+                }
+            }
+        }
+    })
+    .await;
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn cmd_delete_image_thumbnail(
+    message_id: i32,
+    folder_id: Option<i64>,
+    app_handle: tauri::AppHandle,
+) -> Result<(), String> {
+    let cache_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e: tauri::Error| e.to_string())?
+        .join("thumbnails");
+
+    let folder_key = folder_id
+        .map(|id| id.to_string())
+        .unwrap_or_else(|| "home".to_string());
+    let prefix = format!("{}_{}.", folder_key, message_id);
+
+    let _ = tokio::task::spawn_blocking(move || {
+        if let Ok(entries) = std::fs::read_dir(cache_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                let name = path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("");
+                if path.is_file() && name.starts_with(&prefix) {
+                    let _ = std::fs::remove_file(path);
+                }
+            }
+        }
+    })
+    .await;
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn generated_thumbnail_is_bounded_and_readable() {
+        let test_dir = std::env::temp_dir().join(format!(
+            "telegram_drive_thumbnail_test_{}",
+            rand::rng().random::<u64>()
+        ));
+        std::fs::create_dir_all(&test_dir).unwrap();
+        let source_path = test_dir.join("source.png");
+        let destination_path = test_dir.join("result.thumb.jpg");
+        let source = image::RgbImage::from_pixel(2048, 1024, image::Rgb([40, 120, 220]));
+        source
+            .save_with_format(&source_path, image::ImageFormat::Png)
+            .unwrap();
+
+        let generated = create_resized_thumbnail(source_path, destination_path.clone())
+            .await
+            .unwrap();
+        let (width, height) = image::image_dimensions(&generated).unwrap();
+
+        assert_eq!(generated, destination_path);
+        assert!(width <= THUMBNAIL_MAX_DIMENSION);
+        assert!(height <= THUMBNAIL_MAX_DIMENSION);
+        assert!(std::fs::metadata(&generated).unwrap().len() > 0);
+        let _ = std::fs::remove_dir_all(test_dir);
+    }
+}

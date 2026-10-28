@@ -1,0 +1,279 @@
+﻿TCloud 13.0.16 source pack
+Generated: 2026-08-20T10:33:33.7147511-04:00
+Root: D:\TCloud\app
+
+IMPORTANT:
+- Este pacote NAO coleta .env, chaves, sessoes Telegram, banco SQLite ou credenciais.
+- Serve somente para preparar o patch 13.0.16 sobre o codigo real.
+
+Copied files: 55
+Missing requested files: 0
+
+Missing:
+
+===== GIT STATUS =====
+ M Package.appxmanifest
+ M index.html
+ M package-lock.json
+ M package.json
+ M src-tauri/Cargo.lock
+ M src-tauri/Cargo.toml
+ M src-tauri/src/commands/auth.rs
+ M src-tauri/src/commands/fs.rs
+ M src-tauri/src/commands/preview.rs
+ M src-tauri/src/commands/tcloud_cfapi.rs
+ M src-tauri/src/commands/tcloud_conflicts.rs
+ M src-tauri/src/commands/tcloud_dashboard.rs
+ M src-tauri/src/commands/tcloud_forums.rs
+ M src-tauri/src/commands/tcloud_network_settings.rs
+ M src-tauri/src/commands/tcloud_productivity.rs
+ M src-tauri/src/commands/tcloud_sync_maturity.rs
+ M src-tauri/src/db.rs
+ M src-tauri/src/lib.rs
+ M src-tauri/src/server.rs
+ M src-tauri/src/sync/processor.rs
+ M src-tauri/src/sync/watcher_runtime.rs
+ M src-tauri/src/tcloud.rs
+ M src-tauri/tauri.conf.json
+ M src/App.css
+ M src/App.tsx
+ M src/components/desktop/DesktopDashboard.tsx
+ M src/components/desktop/dashboard/ContextMenu.tsx
+ M src/components/desktop/dashboard/ExplorerStatusBar.tsx
+ M src/components/desktop/dashboard/ExplorerUtilityWorkspace.tsx
+ M src/components/desktop/dashboard/FileCard.tsx
+ M src/components/desktop/dashboard/FileExplorer.tsx
+ M src/components/desktop/dashboard/ForumOverview.tsx
+ D src/components/desktop/dashboard/RenameFolderModal.tsx
+ M src/components/desktop/dashboard/SettingsModal.tsx
+ M src/components/desktop/dashboard/Sidebar.tsx
+ M src/components/desktop/dashboard/TCloudAdvancedCenterModal.tsx
+ M src/components/desktop/dashboard/TCloudSimpleSettingsHome.tsx
+ M src/components/desktop/dashboard/TopBar.tsx
+ M src/components/shared/UpdateBanner.tsx
+ M src/context/SettingsContext.tsx
+ M src/hooks/useKeyboardShortcuts.ts
+ M src/hooks/useTelegramConnection.ts
+ M src/hooks/useUpdateCheck.ts
+ M src/i18n/locales/ar.json
+ M src/i18n/locales/de.json
+ M src/i18n/locales/en.json
+ M src/i18n/locales/es.json
+ M src/i18n/locales/fr.json
+ M src/i18n/locales/hi.json
+ M src/i18n/locales/id.json
+ M src/i18n/locales/it.json
+ M src/i18n/locales/ja.json
+ M src/i18n/locales/ko.json
+ M src/i18n/locales/pt-BR.json
+ M src/i18n/locales/ru.json
+ M src/i18n/locales/tr.json
+ M src/i18n/locales/vi.json
+ M src/i18n/locales/zh-CN.json
+ M src/services/imagePreviewCache.ts
+ M src/services/tcloudPerformance.ts
+ M src/services/tcloudProductivity.ts
+ M src/types.ts
+ M src/utils.ts
+?? backup-concurrency-20260815-184448/
+?? backup-disable-auto-keep-both-20260816-142845/
+?? backup-disable-auto-keep-both-v2-20260816-143000/
+?? backup-final-sync-20260815-202934/
+?? backup-hover-preview-20260815-215853/
+?? backup-interface-home-conflicts-20260815-213611/
+?? backup-interface-hover-20260815-205742/
+?? backup-sync-final-20260815-203812/
+?? backup-thumbnail-speed-20260815-211136/
+?? dist-shell-OLD/
+?? index.html.boot-timeout-20260816-121238.bak
+?? index.html.boot-timeout-20260816-121344.bak
+?? interface-2-1-backup-20260815-181511/
+?? interface-2-1-source.txt
+?? interface-2-2-backup-20260815-181818/
+?? interface-audit.txt
+?? interface2-backup-20260815-180424/
+?? performance-backup-20260815-173801/
+?? sidebar-build-error.txt
+?? src-tauri/src/commands/auth.rs.boot-fast-20260816-155822.bak
+?? src-tauri/src/commands/auth.rs.boot-fast-20260816-155907.bak
+?? src-tauri/src/commands/fs.rs.14.21F-extension-fix-20260817-182539.bak
+?? src-tauri/src/commands/fs.rs.14.21F-fix-20260817-182620.bak
+?? src-tauri/src/commands/fs.rs.14.21F-fix-20260817-182717.bak
+?? src-tauri/src/commands/fs.rs.14.21F-linefix-20260817-182820.bak
+?? src-tauri/src/commands/fs.rs.14.21K-empty-name-20260817-192730.bak
+?? src-tauri/src/commands/fs.rs.14.21N-video-metadata-20260817-200531.bak
+?? src-tauri/src/commands/fs.rs.14.21N2-20260817-201106.bak
+?? src-tauri/src/commands/fs.rs.14.21N3-clean.bak
+?? src-tauri/src/commands/fs.rs.meta-probe.bak
+?? src-tauri/src/commands/fs.rs.probe-cleanup-20260817-210614.bak
+?? src-tauri/src/commands/fs.rs.probe-cleanup-20260817-210722.bak
+?? src-tauri/src/commands/fs.rs.topic-probe.bak
+?? src-tauri/src/commands/tcloud_cfapi.rs.14.21D-20260817-180456.bak
+?? src-tauri/src/commands/tcloud_cfapi.rs.14.21D-fix-20260817-180608.bak
+?? src-tauri/src/commands/tcloud_cfapi.rs.14.22A-shell-icon-20260817-211721.bak
+?? src-tauri/src/commands/tcloud_cfapi.rs.bak-cfapi-range-streaming
+?? src-tauri/src/commands/tcloud_cfapi.rs.bak-range-cleanup
+?? src-tauri/src/commands/tcloud_cfapi.rs.before-cfapi-delete-guard-20260818-160004.bak
+?? src-tauri/src/commands/tcloud_conflicts.rs.default-ask-20260816-112910.bak
+?? src-tauri/src/commands/tcloud_dashboard.rs.real-recents-20260816-121822.bak
+?? src-tauri/src/commands/tcloud_forums.rs.14.26-20260818-084429.bak
+?? src-tauri/src/commands/tcloud_network_settings.rs.14.23-20260817-220142.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.14.18D1-20260817-104206.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.14.18D1-fix-20260817-104250.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.14.18D2-20260817-104447.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.14.20B-20260817-110116.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.14.20B-fix-20260817-110155.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.14.20C-20260817-110428.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.14.20D-20260817-110816.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.14.20D-fix-20260817-110956.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.14.21C-20260817-175958.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.14.21G-linefix-20260817-183935.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.14.21G-mime-20260817-183836.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.14.21H-20260817-184752.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.14.21M-20260817-194819.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.14.25-20260818-083948.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.bak-remote-identity-guard
+?? src-tauri/src/commands/tcloud_productivity.rs.before-remote-delete-fix-20260818-153948.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.before-remote-delete-fix-20260818-154116.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.real-conflict-guard-20260816-142505.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.real-conflict-guard-20260816-142510.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.real-conflict-guard-v2-20260816-142550.bak
+?? src-tauri/src/commands/tcloud_productivity.rs.real-conflict-guard-v3-20260816-142637.bak
+?? src-tauri/src/db.rs.14.20B-20260817-110116.bak
+?? src-tauri/src/db.rs.14.20B-fix-20260817-110155.bak
+?? src-tauri/src/db.rs.default-ask-20260816-112910.bak
+?? src-tauri/src/lib.rs.14.18D2-20260817-104447.bak
+?? src-tauri/src/lib.rs.boot-fast-20260816-155822.bak
+?? src-tauri/src/lib.rs.boot-fast-20260816-155907.bak
+?? src-tauri/src/lib.rs.fast-start-reg-20260816-165610.bak
+?? src-tauri/src/sync/processor.rs.14.23-20260817-220142.bak
+?? src-tauri/src/sync/processor.rs.14.24-20260817-220701.bak
+?? src-tauri/src/sync/processor.rs.bak-message-path-fix
+?? src-tauri/src/sync/processor.rs.cfapi-guard-20260815-191629.bak
+?? src-tauri/src/sync/watcher_runtime.rs.before-mass-trash-fix
+?? src-tauri/src/sync/watcher_runtime.rs.before-mass-trash-fix-20260818-155843.bak
+?? src-tauri/src/sync/watcher_runtime.rs.cfapi-upload-hardening-20260815-215353.bak
+?? src-tauri/src/sync/watcher_runtime.rs.placeholder-guard-20260815-195619.bak
+?? src-tauri/src/sync/watcher_runtime.rs.reparse-guard-20260815-195854.bak
+?? src/App.css.14.10.bak
+?? src/App.css.14.15D-20260816-205235.bak
+?? src/App.css.availability-14.14-20260816-204117.bak
+?? src/App.css.before-canonical-file-cards
+?? src/App.css.before-filecard-legacy-cleanup-20260816-200156.bak
+?? src/App.css.context-14.11-20260816-203553.bak
+?? src/App.css.details-14.13-20260816-203856.bak
+?? src/App.css.details-14.7-20260816-202825.bak
+?? src/App.css.explorer-ui-20260815-210419.bak
+?? src/App.css.pre-14.15B-20260816-204645.bak
+?? src/App.css.pre-14.15B-20260816-204742.bak
+?? src/App.css.pre-consolidation-20260816-204450.bak
+?? src/App.css.topbar-14.5-20260816-202607.bak
+?? src/App.tsx.14.15D-20260816-205235.bak
+?? src/App.tsx.14.16A-20260816-205314.bak
+?? src/App.tsx.14.27-20260818-090200.bak
+?? src/App.tsx.14.28-20260818-092614.bak
+?? src/App.tsx.boot-fast-20260816-155822.bak
+?? src/App.tsx.boot-fast-20260816-155907.bak
+?? src/App.tsx.fast-start-reg-20260816-165610.bak
+?? src/App.tsx.pre-14.15B-20260816-204645.bak
+?? src/App.tsx.pre-14.15B-20260816-204742.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.17C-20260816-211123.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.17C-20260817-102554.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.17E-20260817-103143.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.17E-20260817-103237.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.18E-20260817-104643.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.18E-fix-20260817-104831.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.21B-20260817-172623.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.21E-rename-fix-20260817-182318.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.21H-20260817-184752.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.21H-cache-type-20260817-185030.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.21H-linefix-20260817-185114.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.21J-media-routing-20260817-191746.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.21J2-media-routing-20260817-191904.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.21L-linefix-20260817-193705.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.21L-preview-current-object-20260817-193616.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.21M-20260817-194819.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.21O-20260817-210047.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.27-20260818-090200.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.28-20260818-092614.bak
+?? src/components/desktop/DesktopDashboard.tsx.14.29-20260818-093422.bak
+?? src/components/desktop/DesktopDashboard.tsx.bandwidth-adaptive-20260816-183532.bak
+?? src/components/desktop/DesktopDashboard.tsx.bandwidth-adaptive-linepatch-20260816-183621.bak
+?? src/components/desktop/DesktopDashboard.tsx.before-boot-priority-20260816-170547.bak
+?? src/components/desktop/DesktopDashboard.tsx.before-mojibake-fix-20260816-185256.bak
+?? src/components/desktop/DesktopDashboard.tsx.dashboard-14.4-20260816-202416.bak
+?? src/components/desktop/DesktopDashboard.tsx.dashboard-14.4-fix-20260816-202510.bak
+?? src/components/desktop/DesktopDashboard.tsx.forum-refresh-optimized-20260816-182448.bak
+?? src/components/desktop/DesktopDashboard.tsx.forum-refresh-optimized-v2-20260816-182520.bak
+?? src/components/desktop/DesktopDashboard.tsx.hide-legacy-conflicts-20260816-141040.bak
+?? src/components/desktop/DesktopDashboard.tsx.hide-test-files-20260816-111703.bak
+?? src/components/desktop/DesktopDashboard.tsx.hide-test-files-v2-20260816-111825.bak
+?? src/components/desktop/DesktopDashboard.tsx.hide-test-files-v3-20260816-111939.bak
+?? src/components/desktop/DesktopDashboard.tsx.index-opt-linepatch-20260816-183244.bak
+?? src/components/desktop/DesktopDashboard.tsx.index-write-optimized-20260816-183034.bak
+?? src/components/desktop/DesktopDashboard.tsx.index-write-optimized-20260816-183037.bak
+?? src/components/desktop/DesktopDashboard.tsx.native-events-coalesce-20260816-183328.bak
+?? src/components/desktop/DesktopDashboard.tsx.recentes-clean-20260816-141418.bak
+?? src/components/desktop/DesktopDashboard.tsx.recentes-hoist-20260816-144143.bak
+?? src/components/desktop/DesktopDashboard.tsx.refresh-coalesce-20260816-183206.bak
+?? src/components/desktop/DesktopDashboard.tsx.refresh-coalesce-20260816-183211.bak
+?? src/components/desktop/DesktopDashboard.tsx.status-14.8-20260816-203022.bak
+?? src/components/desktop/DesktopDashboard.tsx.status-14.8-fix-20260816-203100.bak
+?? src/components/desktop/dashboard/ContextMenu.tsx.context-14.12-20260816-203635.bak
+?? src/components/desktop/dashboard/ContextMenu.tsx.context-14.12-fix-20260816-203737.bak
+?? src/components/desktop/dashboard/ExplorerStatusBar.tsx.status-14.8-20260816-203022.bak
+?? src/components/desktop/dashboard/ExplorerStatusBar.tsx.status-14.8-fix-20260816-203100.bak
+?? src/components/desktop/dashboard/ExplorerUtilityWorkspace.tsx.sync-consistency-20260815-214607.bak
+?? src/components/desktop/dashboard/ExplorerUtilityWorkspace.tsx.sync-polish-20260815-214207.bak
+?? src/components/desktop/dashboard/ExplorerUtilityWorkspace.tsx.sync-state-fix-20260815-214409.bak
+?? src/components/desktop/dashboard/FileCard.tsx.fast-thumbnails-20260815-210731.bak
+?? src/components/desktop/dashboard/FileCard.tsx.hover-scroll-guard-20260816-183828.bak
+?? src/components/desktop/dashboard/FileExplorer.tsx.explorer-14.6-20260816-202744.bak
+?? src/components/desktop/dashboard/ForumOverview.tsx.14.27-20260818-090200.bak
+?? src/components/desktop/dashboard/RenameFolderModal.tsx.14.29-20260818-093422.bak
+?? src/components/desktop/dashboard/SettingsModal.tsx.bak-before-update-move
+?? src/components/desktop/dashboard/Sidebar.tsx.bak-14.3
+?? src/components/desktop/dashboard/Sidebar.tsx.explorer-self-heal-20260815-213115.bak
+?? src/components/desktop/dashboard/Sidebar.tsx.sidebar-14.3-20260816-201818.bak
+?? src/components/desktop/dashboard/Sidebar.tsx.sidebar-step1-20260816-202111.bak
+?? src/components/desktop/dashboard/Sidebar.tsx.sidebar-step2-20260816-202203.bak
+?? src/components/desktop/dashboard/TCloudAdvancedCenterModal.tsx.14.20D-20260817-110816.bak
+?? src/components/desktop/dashboard/TCloudAdvancedCenterModal.tsx.14.20D-fix-20260817-110956.bak
+?? src/components/desktop/dashboard/TopBar.tsx.topbar-14.4-20260816-202416.bak
+?? src/context/SettingsContext.tsx.bak-concurrency
+?? src/hooks/useKeyboardShortcuts.ts.14.21A-20260817-172300.bak
+?? src/hooks/useKeyboardShortcuts.ts.14.21A-20260817-172339.bak
+?? src/hooks/useTelegramConnection.ts.14.27-20260818-090200.bak
+?? src/hooks/useTelegramConnection.ts.14.28-20260818-092614.bak
+?? src/hooks/useTelegramConnection.ts.14.29-20260818-093422.bak
+?? src/hooks/useTelegramConnection.ts.legacy-scan-optimized-20260816-182946.bak
+?? src/services/tcloudPerformance.ts.bak-20260815-183837
+?? src/services/tcloudProductivity.ts.14.20D-20260817-110816.bak
+?? src/services/tcloudProductivity.ts.14.20D-fix-20260817-110956.bak
+?? src/services/tcloudProductivity.ts.14.21H-20260817-184752.bak
+?? src/services/tcloudProductivity.ts.14.21O-20260817-210047.bak
+?? src/styles/tcloud-explorer-14-base.css
+?? src/styles/tcloud-explorer-14.css
+?? src/styles/tcloud-explorer.css
+?? src/styles/tcloud-explorer.css.14.16C-20260816-205446.bak
+?? src/styles/tcloud-explorer.css.14.16D-20260816-205543.bak
+?? src/styles/tcloud-explorer.css.14.16E-20260816-205644.bak
+?? src/styles/tcloud-explorer.css.14.16F-20260816-205734.bak
+?? src/styles/tcloud-explorer.css.14.16H-20260816-205859.bak
+?? src/styles/tcloud-explorer.css.14.16I-20260816-205944.bak
+?? src/styles/tcloud-explorer.css.14.28-20260818-092614.bak
+?? src/types.ts.14.21O-20260817-210047.bak
+?? src/utils.ts.14.21I-20260817-191133.bak
+?? sync-backup-20260815-175158/
+?? sync-recovery-backup-20260815-182537/
+?? sync-v2-backup-20260815-175341/
+?? ui-audit-20260815-175711.txt
+?? ui-cleanup-backup-20260815-175849/
+
+===== VERSION =====
+13.0.15
+
+===== RECENT COMMITS =====
+5f586bf TCloud 13.0.11 - signed automatic updater working end-to-end
+5d08e6c TCloud 13.0.10 - updater integration test
+00be783 TCloud 13.0.9 - desktop release with signed updater

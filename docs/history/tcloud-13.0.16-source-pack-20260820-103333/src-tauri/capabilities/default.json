@@ -1,0 +1,19 @@
+{
+  "identifier": "default",
+  "description": "Permissões padrão do TCloud",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "os:default",
+    "opener:default",
+    "store:default",
+    "process:allow-restart",
+    "deep-link:default",
+    "clipboard-manager:allow-write-text",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "updater:default"
+  ]
+}
