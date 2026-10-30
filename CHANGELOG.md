@@ -1,3 +1,10 @@
+# TCloud Mobile 1.1.41+122 — Galeria na Nuvem e Painel Atualizado
+
+- Agrupamento facial pode incluir imagens que ainda estão na nuvem, após confirmação da quantidade e estimativa de dados a baixar.
+- Reconhecimento permanece local; downloads temporários são limpos após cada análise, com falhas de limpeza informadas.
+- Progresso da análise e cancelamento após o item em andamento.
+- Painel da galeria com biblioteca catalogada e tamanho offline, sem presumir a cota total da conta.
+
 # TCloud Mobile 1.1.38+119 — Gerenciador de Armazenamento e Limpeza de Cache
 
 - **Central de Armazenamento e Cache (`StorageManagementScreen`)**:
