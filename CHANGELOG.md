@@ -1,3 +1,10 @@
+# TCloud Mobile 1.1.42+123 — Pessoas e Navegação Simplificada
+
+- Agrupamento facial da biblioteca inteira e por álbum, com fotos e amostras de vídeos analisadas localmente.
+- Correção manual de grupos, indicação de grupos novos para revisão e remoção local dos dados faciais.
+- Progresso da análise pode ser pausado e retomado; itens corrigidos manualmente não são reclassificados automaticamente.
+- Navegação principal e exibição de pastas simplificadas, mantendo o estilo inspirado no TeraBox.
+
 # TCloud Mobile 1.1.41+122 — Galeria na Nuvem e Painel Atualizado
 
 - Agrupamento facial pode incluir imagens que ainda estão na nuvem, após confirmação da quantidade e estimativa de dados a baixar.
