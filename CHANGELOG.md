@@ -1,3 +1,11 @@
+# TCloud Mobile 1.1.44+125 — Fotos e Arquivos Separados
+
+- Tela inicial reorganizada como galeria cronológica, com busca e filtros de mídia mais fáceis de encontrar.
+- Fotos usa o catálogo completo de mídia, com agrupamento por data, seleção em lote e opção para continuar vídeos.
+- Arquivos concentra pastas e documentos; filtros menos usados foram agrupados em um menu e o acesso offline foi mantido.
+- Barra inferior renomeia Início para Fotos e Atividade para Transferências; Pessoas e Ajustes continuam acessíveis.
+- Pastas do telefone e do computador ficam disponíveis nas opções de Arquivos.
+
 # TCloud Mobile 1.1.43+124 — Pastas Mais Simples
 
 - Busca unificada nos modos Lista e Galeria, com ação para limpar rapidamente.
