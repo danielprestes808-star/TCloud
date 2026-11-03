@@ -1,3 +1,10 @@
+# TCloud Mobile 1.1.45+126 — Histórico Completo de Mídias
+
+- Fotos percorre todas as páginas do histórico do Telegram em todas as pastas, em vez de limitar a atualização às primeiras pastas e mensagens.
+- Vídeos e demais mídias continuam incluídos no catálogo completo; o carregamento é feito em lotes e mantém as prévias em cache enquanto atualiza.
+- Erros por pasta ficam visíveis na tela e oferecem nova tentativa.
+- Teste de regressão confirma o carregamento de vídeos além da primeira página do histórico.
+
 # TCloud Mobile 1.1.44+125 — Fotos e Arquivos Separados
 
 - Tela inicial reorganizada como galeria cronológica, com busca e filtros de mídia mais fáceis de encontrar.
