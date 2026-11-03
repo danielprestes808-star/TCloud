@@ -1,3 +1,11 @@
+# TCloud Mobile 1.1.43+124 — Pastas Mais Simples
+
+- Busca unificada nos modos Lista e Galeria, com ação para limpar rapidamente.
+- Ações de pasta e seleção em lote agrupadas para reduzir a poluição visual.
+- Agrupamento por rosto continua acessível em pastas que contêm somente vídeos.
+- Mensagem de estado vazio diferencia pasta sem arquivos de busca/filtro sem resultados.
+- Formatação de `account_service.dart` alinhada ao formatter Dart para liberar o Mobile CI.
+
 # TCloud Mobile 1.1.42+123 — Pessoas e Navegação Simplificada
 
 - Agrupamento facial da biblioteca inteira e por álbum, com fotos e amostras de vídeos analisadas localmente.
