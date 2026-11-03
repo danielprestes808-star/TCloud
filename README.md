@@ -9,7 +9,7 @@ TCloud é uma nuvem pessoal distribuída que utiliza o Telegram como camada prim
 | **App Desktop** | `app/` | **13.0.61** | Tauri v2, Rust, React 19, TypeScript | Cliente Windows com integração nativa ao Windows Explorer via Cloud Files API (CFAPI). |
 | **Core API** | `core/` | **0.9.0** | Rust, Axum 0.8, PostgreSQL, Grammers | API REST/Streaming central, catálogo de arquivos, autenticação por dispositivo e ponte Telegram. |
 | **Web** | `web/` | **0.3.9** | Next.js 16, React 19, Fluent Design | Portal web com suporte a PWA e visualização de compartilhamentos públicos. |
-| **Mobile** | `mobile/` | **1.1.45+126** | Flutter 3.44, Dart 3.12, TDLib nativo | App Android com galeria completa de fotos e vídeos do Telegram, navegação separada para Fotos e Arquivos, agrupamento facial local e gerenciamento de cache. |
+| **Mobile** | `mobile/` | **1.1.46+127** | Flutter 3.44, Dart 3.12, TDLib nativo | App Android com galeria completa, reconhecimento facial automático local, busca por pessoa e acompanhamento simplificado do backup. |
 
 Contrato oficial sincronizado: [`contracts/tcloud-ecosystem-contract.json`](file:///d:/TCloud/contracts/tcloud-ecosystem-contract.json).
 

@@ -1,3 +1,12 @@
+# TCloud Mobile 1.1.46+127 — Reconhecimento Facial Automático
+
+- Reconhecimento facial automático da biblioteca atual e de novas mídias, executado localmente e somente enquanto o aparelho estiver carregando; downloads temporários podem usar dados móveis e a opção pode ser desligada em Ajustes.
+- Itens já analisados, inclusive os sem rostos, ficam registrados para evitar processamento repetido; a análise pausa entre mídias se o aparelho deixar de carregar.
+- Fotos exibe um resumo do backup com acesso direto para sincronizar ou acompanhar a fila.
+- Busca da galeria pode ser refinada por pessoa; dica inicial e guia rápido explicam a navegação principal.
+- Atualizações da grade são agrupadas durante a paginação para reduzir reconstruções em bibliotecas grandes.
+- Testes verificam que mídias concluídas não são reanalisadas e que o estado permanece após alterações nos grupos.
+
 # TCloud Mobile 1.1.45+126 — Histórico Completo de Mídias
 
 - Fotos percorre todas as páginas do histórico do Telegram em todas as pastas, em vez de limitar a atualização às primeiras pastas e mensagens.
