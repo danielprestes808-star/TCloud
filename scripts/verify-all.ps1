@@ -101,6 +101,9 @@ try {
         Run-Step -ProjectName "Web" -StepTitle "ESLint" -Directory $webDir -Action {
             npm run lint
         }
+        Run-Step -ProjectName "Web" -StepTitle "Vitest" -Directory $webDir -Action {
+            npm test
+        }
         Run-Step -ProjectName "Web" -StepTitle "Next.js Build" -Directory $webDir -Action {
             npm run build
         }
@@ -113,6 +116,12 @@ try {
         $mobileDir = Join-Path $rootDir "mobile"
         Run-Step -ProjectName "Mobile" -StepTitle "Flutter Analyze" -Directory $mobileDir -Action {
             flutter analyze
+        }
+        Run-Step -ProjectName "Mobile" -StepTitle "Updater Manifest" -Directory $rootDir -Action {
+            node scripts/check-mobile-manifest.mjs
+        }
+        Run-Step -ProjectName "Mobile" -StepTitle "l10n Parity" -Directory $rootDir -Action {
+            node scripts/check-mobile-l10n.mjs
         }
         if (-not $Quick) {
             Run-Step -ProjectName "Mobile" -StepTitle "Flutter Test" -Directory $mobileDir -Action {
@@ -131,6 +140,12 @@ try {
         }
         Run-Step -ProjectName "App" -StepTitle "i18n Validation" -Directory $appDir -Action {
             npm run i18n:validate
+        }
+        Run-Step -ProjectName "App" -StepTitle "CSS !important Ratchet" -Directory $rootDir -Action {
+            node scripts/check-css-important.mjs
+        }
+        Run-Step -ProjectName "App" -StepTitle "Vitest" -Directory $appDir -Action {
+            npm test
         }
         Run-Step -ProjectName "App" -StepTitle "Vite & TypeScript Build" -Directory $appDir -Action {
             npm run build

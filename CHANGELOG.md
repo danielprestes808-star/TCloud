@@ -1,3 +1,28 @@
+# TCloud Desktop 13.0.62 — Galeria Completa de Fotos e Vídeos
+
+- Galeria percorre as pastas de tópicos e todas as páginas do histórico do Telegram para completar o catálogo da biblioteca, sem depender de cada pasta ter sido aberta antes.
+- Fotos e vídeos aparecem em uma linha do tempo por data, com filtros por tipo; a visualização de seleção e ações continua disponível.
+- Falhas de atualização ficam visíveis por pasta e podem ser tentadas novamente.
+- Contrato do ecossistema sincronizado com Desktop `13.0.62` e Mobile `1.1.46+127`. Reconhecimento facial continua disponível no Mobile; o porte para Desktop foi adiado.
+
+## Qualidade e acessibilidade
+
+- Modais de Ajustes, Sincronização, Recursos avançados, Visão geral e Compartilhamento prendem o foco do teclado enquanto abertos, devolvem o foco ao fechar e expõem `role="dialog"` com `aria-modal` e rótulo.
+- Logs de diagnóstico do player e do streaming passam por `utils/logger`, silenciosos em produção e reativáveis com `localStorage.tcloud_debug = "1"`.
+- CSP do webview deixa de permitir `unsafe-eval` e scripts de origem `https:` arbitrária.
+- `formatBytes` devolve `0 Bytes` para valores negativos ou não finitos, em vez de `NaN undefined`.
+- Suíte Vitest no App (10 testes) e no Web (3 testes), executada no `verify-all.ps1` e no CI.
+- Core ganha testes de política de rate limit e de extração de IP do cliente.
+- `scripts/check-mobile-manifest.mjs` avisa quando o manifesto do updater mobile fica atrás do `pubspec.yaml`.
+- Vulnerabilidade moderada do `i18next` corrigida (`npm audit` sem ocorrências).
+
+# TCloud Mobile 1.1.47+128 — Interface em Três Idiomas
+
+- App passa a ter localização real: `flutter_localizations` mais ARB em português, inglês e espanhol, com 71 chaves por idioma e paridade verificada por script.
+- Diálogos, seletores de data e botões nativos do Material deixam de aparecer em inglês quando o app está em português.
+- Galeria, filtros, ações em lote, digitalização de documentos e tela de atualização passam a ler os textos do catálogo de traduções em vez de strings fixas no código.
+- Teste de localização confirma os três locales, a interpolação de contadores e a ausência de traduções vazias.
+
 # TCloud Mobile 1.1.46+127 — Reconhecimento Facial Automático
 
 - Reconhecimento facial automático da biblioteca atual e de novas mídias, executado localmente e somente enquanto o aparelho estiver carregando; downloads temporários podem usar dados móveis e a opção pode ser desligada em Ajustes.

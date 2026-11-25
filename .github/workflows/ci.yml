@@ -60,6 +60,10 @@ jobs:
         working-directory: web
         run: npm run lint
 
+      - name: Vitest
+        working-directory: web
+        run: npm test
+
       - name: Next.js Build
         working-directory: web
         run: npm run build
@@ -95,6 +99,9 @@ jobs:
       - name: Flutter Analyze
         working-directory: mobile
         run: flutter analyze
+
+      - name: l10n Parity
+        run: node scripts/check-mobile-l10n.mjs
 
       - name: Flutter Test
         working-directory: mobile
@@ -136,6 +143,13 @@ jobs:
       - name: i18n Validation
         working-directory: app
         run: npm run i18n:validate
+
+      - name: CSS !important Ratchet
+        run: node scripts/check-css-important.mjs
+
+      - name: Vitest
+        working-directory: app
+        run: npm test
 
       - name: Vite & TypeScript Build
         working-directory: app

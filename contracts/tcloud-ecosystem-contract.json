@@ -1,7 +1,7 @@
 {
   "schema": "tcloud-ecosystem-contract",
-  "contractVersion": "13.0.61",
-  "updatedAt": "2026-10-28T09:30:00-04:00",
+  "contractVersion": "13.0.62",
+  "updatedAt": "2026-11-03T14:16:00-04:00",
   "status": "synchronized",
   "components": {
     "core": {
@@ -20,27 +20,36 @@
     },
     "app": {
       "name": "TCloud Desktop",
-      "version": "13.0.61",
+      "version": "13.0.62",
       "framework": "Tauri v2 / React 19 / TypeScript / CFAPI Windows",
       "features": [
         "cfapi-cloud-files",
         "virtualized-file-list",
         "multi-language-i18n",
         "local-streaming-server",
-        "auto-updater"
+        "auto-updater",
+        "full-history-media-catalog",
+        "date-grouped-photo-video-gallery",
+        "per-folder-media-retry"
       ]
     },
     "mobile": {
       "name": "TCloud Mobile",
-      "version": "1.1.38+119",
-      "framework": "Flutter 3.12 / Dart / TDLib Android",
+      "version": "1.1.47+128",
+      "framework": "Flutter 3.44 / Dart 3.12 / TDLib Android",
       "features": [
         "tdlib-direct-sync",
         "gallery-backup",
         "biometric-app-lock",
         "mlkit-document-scanner",
         "chromecast-streaming",
-        "storage-cache-manager"
+        "storage-cache-manager",
+        "full-history-media-catalog",
+        "photos-files-navigation",
+        "local-face-grouping",
+        "automatic-charging-face-scan",
+        "person-search",
+        "multi-language-l10n"
       ]
     },
     "web": {

@@ -6,12 +6,12 @@ TCloud é uma nuvem pessoal distribuída que utiliza o Telegram como camada prim
 
 | Componente | Diretório | Versão Atual | Stack Tecnológica | Papel no Ecossistema |
 | :--- | :--- | :--- | :--- | :--- |
-| **App Desktop** | `app/` | **13.0.61** | Tauri v2, Rust, React 19, TypeScript | Cliente Windows com integração nativa ao Windows Explorer via Cloud Files API (CFAPI). |
+| **App Desktop** | `app/` | **13.0.62** | Tauri v2, Rust, React 19, TypeScript | Cliente Windows com integração CFAPI, catálogo completo de mídia e galeria cronológica de fotos e vídeos. |
 | **Core API** | `core/` | **0.9.0** | Rust, Axum 0.8, PostgreSQL, Grammers | API REST/Streaming central, catálogo de arquivos, autenticação por dispositivo e ponte Telegram. |
 | **Web** | `web/` | **0.3.9** | Next.js 16, React 19, Fluent Design | Portal web com suporte a PWA e visualização de compartilhamentos públicos. |
-| **Mobile** | `mobile/` | **1.1.46+127** | Flutter 3.44, Dart 3.12, TDLib nativo | App Android com galeria completa, reconhecimento facial automático local, busca por pessoa e acompanhamento simplificado do backup. |
+| **Mobile** | `mobile/` | **1.1.47+128** | Flutter 3.44, Dart 3.12, TDLib nativo | App Android com galeria completa, reconhecimento facial automático local, busca por pessoa, acompanhamento simplificado do backup e interface em português, inglês e espanhol. O reconhecimento facial ainda não foi portado para o Desktop. |
 
-Contrato oficial sincronizado: [`contracts/tcloud-ecosystem-contract.json`](file:///d:/TCloud/contracts/tcloud-ecosystem-contract.json).
+Contrato oficial sincronizado: [`contracts/tcloud-ecosystem-contract.json`](contracts/tcloud-ecosystem-contract.json).
 
 ---
 
@@ -72,6 +72,25 @@ powershell -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -Project web
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -Project app
 powershell -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -Project mobile
 ```
+
+### Guardas executados junto da validação
+
+| Guarda | Comando | O que impede |
+|---|---|---|
+| Manifesto do updater mobile | `node scripts/check-mobile-manifest.mjs` | Publicar release com `mobile-latest.json` atrás do `pubspec.yaml` |
+| Paridade de traduções mobile | `node scripts/check-mobile-l10n.mjs` | Locale com chave faltando cair silenciosamente no português |
+| Catraca de `!important` | `node scripts/check-css-important.mjs` | Aumentar a dívida de especificidade no CSS |
+
+O guarda do manifesto apenas avisa por padrão; use `--strict` para transformá-lo em falha. A catraca de CSS compara com `scripts/css-important-baseline.json` e falha quando o número sobe — rode `--update` depois de reduzir a dívida para travar o novo patamar.
+
+### Suítes de teste
+
+| Projeto | Comando | Cobertura atual |
+|---|---|---|
+| Core | `cargo test` (em `core/`) | Política de rate limit e chave de cliente |
+| App (Desktop) | `npm test` (em `app/`) | Utilitários de formatação, classificação e sanitização |
+| Web | `npm test` (em `web/`) | Identidade canônica e i18n |
+| Mobile | `flutter test` (em `mobile/`) | Galeria, grupos faciais e sincronização |
 
 ---
 
