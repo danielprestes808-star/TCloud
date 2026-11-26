@@ -1,3 +1,10 @@
+# TCloud Mobile 1.1.48+129 — Busca e Miniaturas Mais Leves
+
+- Busca da tela inicial e das pastas passa a ser agrupada por 250 ms: a biblioteca é refiltrada uma vez por pausa na digitação, não a cada tecla. Enter aplica na hora e limpar a busca descarta o agendamento.
+- Miniaturas de galeria, lista e grupos de pessoas são decodificadas no tamanho exibido multiplicado pela densidade da tela, com limite de 2048 px por lado; fotos grandes deixam de ser decodificadas inteiras para caber em células pequenas.
+- Cartões da galeria expõem nome, tipo, tamanho e estado de seleção para leitores de tela, e o menu rápido do cartão ganhou tooltip.
+- Novos testes cobrem o agrupamento da busca, o descarte e a aplicação imediata de digitação pendente, e o cálculo de tamanho de decodificação.
+
 # TCloud Desktop 13.0.62 — Galeria Completa de Fotos e Vídeos
 
 - Galeria percorre as pastas de tópicos e todas as páginas do histórico do Telegram para completar o catálogo da biblioteca, sem depender de cada pasta ter sido aberta antes.
