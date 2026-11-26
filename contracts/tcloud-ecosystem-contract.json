@@ -35,7 +35,7 @@
     },
     "mobile": {
       "name": "TCloud Mobile",
-      "version": "1.1.48+129",
+      "version": "1.1.49+130",
       "framework": "Flutter 3.44 / Dart 3.12 / TDLib Android",
       "features": [
         "tdlib-direct-sync",
@@ -51,7 +51,10 @@
         "person-search",
         "multi-language-l10n",
         "debounced-search",
-        "sized-thumbnail-decoding"
+        "sized-thumbnail-decoding",
+        "in-memory-error-log",
+        "language-picker",
+        "abi-split-release"
       ]
     },
     "web": {

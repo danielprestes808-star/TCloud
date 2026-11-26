@@ -1,3 +1,12 @@
+# TCloud Mobile 1.1.49+130 — Diagnóstico, Idioma e APK Menor
+
+- `TCloudLogger` guarda um buffer circular em memória e instala capturadores globais (`FlutterError.onError`, `PlatformDispatcher.onError` e `ErrorWidget`); os 24 `catch` que engoliam erros em silêncio agora registram escopo, mensagem e stack.
+- Seletor de idioma em Ajustes (Sistema, Português, English, Español) persistido localmente, com `MaterialApp.locale` reagindo à escolha; a fila de sincronização passa a ler os textos do catálogo de traduções (154 chaves em pt/en/es).
+- Alturas fixas de barras de chips (34/44/54 px) passam a acompanhar a escala de fonte do sistema, com limite de 2x; cartões da galeria ganharam rótulos de acessibilidade.
+- Lista visível da pasta é memoizada por revisão de dados: a seleção por arraste deixou de refiltrar e reordenar a pasta a cada movimento do ponteiro.
+- Build de release deixa de empacotar `x86_64` (apenas emulador), removendo cerca de 95 MB do APK; dependências atualizadas com `flutter pub upgrade`.
+- CI passa a rodar `flutter test --coverage` com piso verificado por `scripts/check-mobile-coverage.mjs` (17%), e novos testes cobrem logger, métricas de layout, idioma, preferências da biblioteca e central de transferências.
+
 # TCloud Mobile 1.1.48+129 — Busca e Miniaturas Mais Leves
 
 - Busca da tela inicial e das pastas passa a ser agrupada por 250 ms: a biblioteca é refiltrada uma vez por pausa na digitação, não a cada tecla. Enter aplica na hora e limpar a busca descarta o agendamento.
